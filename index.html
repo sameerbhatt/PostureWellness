@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Posture Wellness - Privacy-First Posture Monitoring for macOS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sage: #8B9A88;
+            --sage-light: #A8B5A5;
+            --sage-dark: #6B7A68;
+            --cream: #F5F3EE;
+            --warm-white: #FDFCFA;
+            --charcoal: #2C2C2C;
+            --terracotta: #C67B5C;
+            --soft-blue: #9DB4C0;
+            --gold: #D4A574;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--warm-white);
+            color: var(--charcoal);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* Subtle grain texture overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='2.5' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0.4;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        /* Header */
+        header {
+            padding: 2rem 0;
+            position: relative;
+            z-index: 100;
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 3rem;
+            font-weight: 600;
+            color: var(--sage-dark);
+            letter-spacing: 0.5px;
+            margin-left: 0.2rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2.5rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--charcoal);
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: color 0.3s ease;
+            position: relative;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 1px;
+            background: var(--sage);
+            transition: width 0.3s ease;
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 6rem 0 8rem;
+            position: relative;
+        }
+
+        .hero-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+        }
+
+        .hero-text {
+            opacity: 0;
+            animation: fadeInUp 0.8s ease forwards;
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+        }
+
+        .hero-text h1 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 4rem;
+            font-weight: 300;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            color: var(--charcoal);
+        }
+
+        .hero-text h1 strong {
+            font-weight: 600;
+            color: var(--sage-dark);
+            display: block;
+        }
+
+        .hero-text p {
+            font-size: 1.15rem;
+            color: #666;
+            margin-bottom: 2.5rem;
+            line-height: 1.8;
+        }
+
+        .cta-group {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .free-note {
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            color: var(--sage-dark);
+            font-weight: 500;
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-block;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .btn-primary {
+            background: var(--sage);
+            color: white;
+            box-shadow: 0 4px 12px rgba(139, 154, 136, 0.2);
+        }
+
+        .btn-primary:hover {
+            background: var(--sage-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(139, 154, 136, 0.3);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--charcoal);
+            border: 1.5px solid var(--sage-light);
+        }
+
+        .btn-secondary:hover {
+            background: var(--cream);
+            border-color: var(--sage);
+        }
+
+        .hero-visual {
+            position: relative;
+            opacity: 0;
+            animation: fadeInUp 0.8s 0.2s ease forwards;
+        }
+
+        .app-mockup {
+            background: linear-gradient(135deg, var(--cream) 0%, var(--warm-white) 100%);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 
+                0 20px 60px rgba(0, 0, 0, 0.08),
+                0 0 0 1px rgba(0, 0, 0, 0.05);
+            position: relative;
+        }
+
+        .mockup-window {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            border: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .posture-indicator {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--sage);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(0.95); }
+        }
+
+        .status-text {
+            font-weight: 500;
+            color: var(--sage-dark);
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .metric {
+            background: var(--cream);
+            padding: 1rem;
+            border-radius: 6px;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #999;
+            margin-bottom: 0.25rem;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--sage-dark);
+        }
+
+        /* Features Section */
+        .features {
+            padding: 6rem 0;
+            background: var(--cream);
+            position: relative;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .section-label {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--sage);
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .section-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 3rem;
+            font-weight: 400;
+            color: var(--charcoal);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+        }
+
+        .feature-card {
+            background: var(--warm-white);
+            padding: 2.5rem 2rem;
+            border-radius: 12px;
+            border: 1px solid rgba(139, 154, 136, 0.15);
+            transition: all 0.3s ease;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .feature-card.visible {
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        .feature-card:nth-child(2) { animation-delay: 0.1s; }
+        .feature-card:nth-child(3) { animation-delay: 0.2s; }
+        .feature-card:nth-child(4) { animation-delay: 0.3s; }
+        .feature-card:nth-child(5) { animation-delay: 0.4s; }
+        .feature-card:nth-child(6) { animation-delay: 0.5s; }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            color: var(--charcoal);
+        }
+
+        .feature-card h3 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--charcoal);
+        }
+
+        .feature-card p {
+            color: #666;
+            line-height: 1.7;
+        }
+
+        /* Privacy Section */
+        .privacy {
+            padding: 6rem 0;
+            background: var(--sage-dark);
+            color: var(--cream);
+        }
+
+        .privacy-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+        }
+
+        .privacy-visual {
+            position: relative;
+        }
+
+        .privacy-badge {
+            background: rgba(245, 243, 238, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(245, 243, 238, 0.2);
+            padding: 3rem;
+            border-radius: 16px;
+            text-align: center;
+        }
+
+        .lock-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.9;
+        }
+
+        .privacy-text h2 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 3rem;
+            font-weight: 400;
+            margin-bottom: 1.5rem;
+            color: var(--cream);
+        }
+
+        .privacy-text p {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            margin-bottom: 1rem;
+            color: var(--sage-light);
+        }
+
+        .privacy-features {
+            display: grid;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .privacy-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: rgba(245, 243, 238, 0.05);
+            border-radius: 8px;
+        }
+
+        .check-icon {
+            color: #999;
+            font-size: 1.2rem;
+        }
+
+        /* How It Works */
+        .how-it-works {
+            padding: 6rem 0;
+        }
+
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .step {
+            text-align: center;
+            position: relative;
+        }
+
+        .step-number {
+            width: 60px;
+            height: 60px;
+            background: var(--sage);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 0 auto 1.5rem;
+            font-family: 'Cormorant Garamond', serif;
+        }
+
+        .step h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            color: var(--charcoal);
+        }
+
+        .step p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        /* CTA Section */
+        .cta-section {
+            padding: 6rem 0;
+            background: linear-gradient(135deg, var(--sage) 0%, var(--sage-dark) 100%);
+            color: white;
+            text-align: center;
+        }
+
+        .cta-section h2 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 3.5rem;
+            font-weight: 400;
+            margin-bottom: 1.5rem;
+        }
+
+        .cta-section p {
+            font-size: 1.2rem;
+            margin-bottom: 2.5rem;
+            opacity: 0.9;
+        }
+
+        .btn-light {
+            background: white;
+            color: var(--sage-dark);
+        }
+
+        .btn-light:hover {
+            background: var(--cream);
+            transform: translateY(-2px);
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-outline-light {
+            background: transparent;
+            color: white;
+            border: 1.5px solid rgba(255, 255, 255, 0.6);
+        }
+
+        .btn-outline-light:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: white;
+            transform: translateY(-2px);
+        }
+
+        .cta-section .cta-free-note {
+            margin-top: 1.5rem;
+            margin-bottom: 0;
+            font-size: 0.9rem;
+            opacity: 0.85;
+        }
+
+        /* Install Guide */
+        .install-card {
+            max-width: 640px;
+            margin: 3rem auto 0;
+            background: var(--warm-white);
+            border: 1px solid rgba(139, 154, 136, 0.15);
+            border-radius: 12px;
+            padding: 2.5rem;
+            text-align: left;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
+        }
+
+        .install-card h3 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.8rem;
+            color: var(--charcoal);
+            margin-bottom: 0.75rem;
+        }
+
+        .install-card > p {
+            color: #666;
+            margin-bottom: 1.5rem;
+        }
+
+        .install-steps {
+            list-style: none;
+            counter-reset: install-step;
+            display: grid;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .install-steps li {
+            counter-increment: install-step;
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            color: var(--charcoal);
+        }
+
+        .install-steps li::before {
+            content: counter(install-step);
+            flex-shrink: 0;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--sage);
+            color: white;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .install-note {
+            font-size: 0.9rem;
+            color: var(--sage-dark);
+            font-weight: 500;
+            border-top: 1px solid rgba(139, 154, 136, 0.15);
+            padding-top: 1.25rem;
+        }
+
+        /* Footer */
+        footer {
+            background: var(--charcoal);
+            color: var(--sage-light);
+            padding: 3rem 0 2rem;
+        }
+
+        .footer-content {
+            margin-bottom: 2rem;
+        }
+
+        .footer-brand {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--cream);
+        }
+
+        .footer-bottom {
+            border-top: 1px solid rgba(168, 181, 165, 0.2);
+            padding-top: 2rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            text-align: center;
+            font-size: 0.85rem;
+        }
+
+        .footer-support-link {
+            color: var(--sage-light);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .footer-support-link:hover {
+            color: var(--cream);
+        }
+
+        /* Responsive */
+        @media (max-width: 968px) {
+            .hero-content,
+            .privacy-content {
+                grid-template-columns: 1fr;
+                gap: 3rem;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .steps {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .hero-text h1 {
+                font-size: 3rem;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .nav-links {
+                display: none;
+            }
+
+            .hero-text h1 {
+                font-size: 2.5rem;
+            }
+
+            .cta-group {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .btn {
+                width: 100%;
+                text-align: center;
+            }
+
+            .steps {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Scroll reveal */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease;
+        }
+
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <nav class="container">
+            <div class="logo">Posture Wellness</div>
+            <ul class="nav-links">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#privacy">Privacy</a></li>
+                <li><a href="#how-it-works">How It Works</a></li>
+                <li><a href="#download">Download</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-text">
+                    <h1>
+                        Your Posture,
+                        <strong>Mindfully Monitored</strong>
+                    </h1>
+                    <p>A privacy-first macOS app that lives in your menu bar, gently guiding you toward better posture. No cloud, no tracking - just you and your wellness.</p>
+                    <div class="cta-group">
+                        <a href="#download" class="btn btn-primary">Download for macOS</a>
+                        <a href="#how-it-works" class="btn btn-secondary">Learn More</a>
+                    </div>
+                    <p class="free-note">Free, always — no subscriptions, no paywalls.</p>
+                </div>
+                <div class="hero-visual">
+                    <div class="app-mockup">
+                        <div class="mockup-window">
+                            <div class="posture-indicator">
+                                <div class="status-dot"></div>
+                                <div class="status-text">Monitoring Active</div>
+                            </div>
+                            <div class="metrics">
+                                <div class="metric">
+                                    <div class="metric-label">Posture Score</div>
+                                    <div class="metric-value">87</div>
+                                </div>
+                                <div class="metric">
+                                    <div class="metric-label">Today's Avg</div>
+                                    <div class="metric-value">82</div>
+                                </div>
+                            </div>
+                            <div class="metrics" style="margin-top: 1rem;">
+                                <div class="metric">
+                                    <div class="metric-label">Neck Posture</div>
+                                    <div class="metric-value" style="color: var(--sage); font-size: 1.2rem;">✓</div>
+                                </div>
+                                <div class="metric">
+                                    <div class="metric-label">Head Tilt</div>
+                                    <div class="metric-value" style="color: var(--sage); font-size: 1.2rem;">✓</div>
+                                </div>
+                                <div class="metric">
+                                    <div class="metric-label">Shoulder Alignment</div>
+                                    <div class="metric-value" style="color: var(--sage); font-size: 1.2rem;">✓</div>
+                                </div>
+                                <div class="metric">
+                                    <div class="metric-label">Sitting</div>
+                                    <div class="metric-value" style="color: var(--terracotta); font-size: 1.2rem;">⚠</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-label">Core Features</div>
+                <h2 class="section-title">Designed for Your Wellbeing</h2>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Real-Time Analysis</h3>
+                    <p>Apple Vision framework detects neck angle, shoulder alignment, torso posture, and sitting duration with precision.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔔</div>
+                    <h3>Gentle Reminders</h3>
+                    <p>Customizable notification modes from silent to active. Choose how and when you want to be reminded.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Visual Feedback</h3>
+                    <p>See your captured posture analysis with detailed breakdowns of detected issues and guidance.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📈</div>
+                    <h3>Analytics Dashboard</h3>
+                    <p>Track your posture trends over time with charts and insights to measure your progress.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⏸️</div>
+                    <h3>Pause & Resume</h3>
+                    <p>Full control over monitoring. Pause when you need a break, resume when you're ready.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⚙️</div>
+                    <h3>Fully Configurable</h3>
+                    <p>Adjust capture intervals, notification frequency, and sensitivity to match your needs.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Privacy Section -->
+    <section class="privacy" id="privacy">
+        <div class="container">
+            <div class="privacy-content">
+                <div class="privacy-visual">
+                    <div class="privacy-badge">
+                        <div class="lock-icon">🔒</div>
+                        <h3 style="font-family: 'Cormorant Garamond', serif; font-size: 2rem; margin-bottom: 1rem;">Privacy First</h3>
+                        <p style="color: var(--sage-light);">Everything stays on your Mac. Always.</p>
+                    </div>
+                </div>
+                <div class="privacy-text">
+                    <h2>Your Data Never Leaves Your Device</h2>
+                    <p>Posture Wellness is built with privacy as a core principle. We don't collect, store, or transmit any of your data to the cloud.</p>
+                    <p>All posture analysis happens locally using Apple's Vision framework. Your camera captures are processed immediately and discarded — never saved unless you explicitly choose to review them.</p>
+                    <div class="privacy-features">
+                        <div class="privacy-item">
+                            <div class="check-icon">✓</div>
+                            <div>No cloud dependencies or third-party services</div>
+                        </div>
+                        <div class="privacy-item">
+                            <div class="check-icon">✓</div>
+                            <div>All analytics stored locally</div>
+                        </div>
+                        <div class="privacy-item">
+                            <div class="check-icon">✓</div>
+                            <div>Camera access used only for pose detection</div>
+                        </div>
+                        <div class="privacy-item">
+                            <div class="check-icon">✓</div>
+                            <div>Full control over data retention periods</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="how-it-works" id="how-it-works">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-label">Simple & Effective</div>
+                <h2 class="section-title">How It Works</h2>
+            </div>
+            <div class="steps">
+                <div class="step reveal">
+                    <div class="step-number">1</div>
+                    <h3>Install & Grant Permissions</h3>
+                    <p>One-time setup for camera and notifications</p>
+                </div>
+                <div class="step reveal">
+                    <div class="step-number">2</div>
+                    <h3>Runs in Menu Bar</h3>
+                    <p>Discreet monitoring every 60 seconds (default)</p>
+                </div>
+                <div class="step reveal">
+                    <div class="step-number">3</div>
+                    <h3>Get Gentle Nudges</h3>
+                    <p>Notifications when posture needs attention</p>
+                </div>
+                <div class="step reveal">
+                    <div class="step-number">4</div>
+                    <h3>Track Progress</h3>
+                    <p>View analytics and improve over time</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section" id="download">
+        <div class="container">
+            <h2>Ready to Improve Your Posture?</h2>
+            <p>Download Posture Wellness and start your journey to better health today.</p>
+            <div class="cta-buttons">
+                <a href="https://github.com/sameerbhatt/PostureWellness/releases/latest" class="btn btn-light">Download for macOS 11.0+</a>
+                <a href="https://forms.gle/W3qZnc3ghGvaRowS6" class="btn btn-outline-light" target="_blank" rel="noopener">💬 Report an Issue / Feedback</a>
+                <a href="https://github.com/sponsors/sameerbhatt" class="btn btn-outline-light" target="_blank" rel="noopener">☕ Support the Project</a>
+            </div>
+            <p class="cta-free-note">Free forever — no subscriptions, no paywalls.</p>
+
+            <div class="install-card">
+                <h3>First time opening on macOS?</h3>
+                <p>Since this app is independently distributed, macOS will show a security warning.</p>
+                <ol class="install-steps">
+                    <li>After downloading, open the app</li>
+                    <li>Go to <strong>System Settings → Privacy &amp; Security</strong></li>
+                    <li>Scroll down and click <strong>"Open Anyway"</strong></li>
+                    <li>Enter your Mac password when prompted</li>
+                </ol>
+                <p class="install-note">This is a one-time step. The app runs fully locally. No data ever leaves your Mac.
+                    If there is enough interest, I will submit the app to the Mac App Store for easier installation and automatic updates.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-bottom">
+                <p>&copy; 2026 Sameer Bhatt. All rights reserved. Built with ❤️ for better posture and health.</p>
+                <a href="https://forms.gle/W3qZnc3ghGvaRowS6" class="footer-support-link" target="_blank" rel="noopener">💬 Report an Issue / Feedback</a>
+                <a href="https://github.com/sponsors/sameerbhatt" class="footer-support-link" target="_blank" rel="noopener">☕ Support this project</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Scroll reveal animation
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.reveal, .feature-card').forEach(el => {
+            observer.observe(el);
+        });
+
+        // Smooth scrolling
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

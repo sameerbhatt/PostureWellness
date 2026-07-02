@@ -1,0 +1,73 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Premium gradient background -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#5B9FED;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4A7FC7;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Rounded square mask -->
+    <mask id="iconMask">
+      <rect width="1024" height="1024" rx="180" ry="180" fill="white"/>
+    </mask>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1024" height="1024" rx="180" ry="180" fill="url(#bgGradient)"/>
+  
+  <g mask="url(#iconMask)">
+    <!-- P Monogram centered -->
+    <g transform="translate(512, 512)">
+      
+      <!-- P Letter - Bolder version -->
+      <g transform="translate(0, 0)">
+        <!-- Vertical stem of P -->
+        <rect x="-225" y="-320" width="140" height="640" rx="25" fill="white"/>
+        
+        <!-- Bowl of P (top rounded part) -->
+        <path d="M -85 -320 
+                 L 85 -320 
+                 Q 225 -320 225 -130
+                 Q 225 80 85 80
+                 L -85 80 Z" 
+              fill="white"/>
+        
+        <!-- Inner cutout of P bowl -->
+        <path d="M -85 -210
+                 L 65 -210
+                 Q 115 -210 115 -130
+                 Q 115 -50 65 -50
+                 L -85 -50 Z" 
+              fill="url(#bgGradient)"/>
+      </g>
+      
+      <!-- Large glowing spine dots -->
+      <g transform="translate(-155, 0)">
+        <!-- Top dot with glow -->
+        <circle cx="0" cy="-260" r="45" fill="#50E3C2" opacity="0.3"/>
+        <circle cx="0" cy="-260" r="28" fill="#50E3C2"/>
+        
+        <!-- Second dot -->
+        <circle cx="0" cy="-160" r="40" fill="#50E3C2" opacity="0.3"/>
+        <circle cx="0" cy="-160" r="25" fill="#50E3C2"/>
+        
+        <!-- Third dot -->
+        <circle cx="0" cy="-60" r="40" fill="#2ECC71" opacity="0.3"/>
+        <circle cx="0" cy="-60" r="25" fill="#2ECC71"/>
+        
+        <!-- Center dot -->
+        <circle cx="0" cy="40" r="40" fill="#2ECC71" opacity="0.3"/>
+        <circle cx="0" cy="40" r="25" fill="#2ECC71"/>
+        
+        <!-- Fifth dot -->
+        <circle cx="0" cy="140" r="40" fill="#27AE60" opacity="0.3"/>
+        <circle cx="0" cy="140" r="25" fill="#27AE60"/>
+        
+        <!-- Bottom dot with glow -->
+        <circle cx="0" cy="240" r="45" fill="#27AE60" opacity="0.3"/>
+        <circle cx="0" cy="240" r="28" fill="#27AE60"/>
+      </g>
+      
+    </g>
+  </g>
+</svg>

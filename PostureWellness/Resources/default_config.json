@@ -1,0 +1,80 @@
+{
+  "version": "1.0",
+  "neck": {
+    "good_max": 10,
+    "minor_max": 20,
+    "poor_threshold": 21,
+    "weight_minor": 10,
+    "weight_poor": 25
+  },
+  "shoulders": {
+    "symmetry_good_max": 2,
+    "symmetry_minor_max": 4,
+    "symmetry_poor_threshold": 5,
+    "rounding_good_max": 15,
+    "rounding_minor_max": 25,
+    "rounding_poor_threshold": 26,
+    "weight_minor": 10,
+    "weight_poor": 20,
+    "weight_both_issues": 30
+  },
+  "torso": {
+    "good_max": 15,
+    "minor_max": 25,
+    "poor_threshold": 26,
+    "weight_minor": 10,
+    "weight_poor": 25
+  },
+  "distance": {
+    "good_min": 50,
+    "good_max": 70,
+    "minor_min": 35,
+    "minor_max": 85,
+    "poor_min": 0,
+    "poor_max": 999,
+    "weight_minor": 5,
+    "weight_poor": 15,
+    "auto_detect_enabled": false,
+    "manual_distance": 60
+  },
+  "sitting": {
+    "good_max": 45,
+    "minor_max": 60,
+    "poor_threshold": 61,
+    "weight_minor": 5,
+    "weight_poor": 15,
+    "reset_on_movement": true,
+    "movement_threshold": 0.3
+  },
+  "break_reminder": {
+    "enabled": true,
+    "interval_minutes": 60,
+    "duration_seconds": 300,
+    "show_exercises": true,
+    "auto_pause_monitoring": false
+  },
+  "vision": {
+    "confidence_threshold": 0.20,
+    "confidence_warning_count": 3
+  },
+  "notifications": {
+    "poor_score_threshold": 60,
+    "min_interval_minutes": 5,
+    "dismiss_duration_minutes": 15,
+    "dismiss_until_improvement": false,
+    "strict_consecutive": 1,
+    "active_consecutive": 2,
+    "gentle_consecutive": 3
+  },
+  "scoring": {
+    "base_score": 100,
+    "excellent_min": 90,
+    "good_min": 75,
+    "fair_min": 60,
+    "poor_min": 40
+  },
+  "performance": {
+    "max_analysis_time_seconds": 2,
+    "target_memory_mb": 150
+  }
+}
