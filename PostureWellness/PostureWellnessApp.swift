@@ -36,7 +36,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Register default values
         UserDefaults.standard.register(defaults: [
-            "captureInterval": 120.0  // 2 minutes default
+            "captureInterval": 120.0,  // 2 minutes default
+            "runOnBattery": true,
+            "reduceFrequencyOnBattery": true
         ])
         
         NSApp.setActivationPolicy(.accessory)
