@@ -356,7 +356,7 @@ struct SettingsView: View {
                     Text("© Sameer Bhatt. All rights reserved.")
                         .font(.headline)
                     Spacer()
-                    Text("v1.0.0")
+                    Text("v1.0-beta")
                         .foregroundColor(.secondary)
                 }
                         

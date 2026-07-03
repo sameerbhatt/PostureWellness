@@ -427,5 +427,5 @@ If you encounter "session not running" errors, check the camera cleanup synchron
 ---
 
 **Last Updated:** June 2026
-**App Version:** 1.0.0 (MVP)
+**App Version:** 1.0-beta
 **Status:** Beta testing ready

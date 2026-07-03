@@ -73,6 +73,22 @@
             color: var(--sage-dark);
             letter-spacing: 0.5px;
             margin-left: 0.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .beta-badge {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            color: var(--sage-dark);
+            background: rgba(139, 154, 136, 0.15);
+            border: 1px solid rgba(139, 154, 136, 0.35);
+            border-radius: 20px;
+            padding: 0.25rem 0.6rem;
         }
 
         .nav-links {
@@ -166,6 +182,13 @@
             margin-top: 1rem;
             font-size: 0.85rem;
             color: var(--sage-dark);
+            font-weight: 500;
+        }
+
+        .beta-note {
+            margin-top: 0.6rem;
+            font-size: 0.85rem;
+            color: #8a7a4a;
             font-weight: 500;
         }
 
@@ -690,7 +713,7 @@
     <!-- Header -->
     <header>
         <nav class="container">
-            <div class="logo">Posture Wellness</div>
+            <div class="logo">Posture Wellness <span class="beta-badge">Beta</span></div>
             <ul class="nav-links">
                 <li><a href="#features">Features</a></li>
                 <li><a href="#privacy">Privacy</a></li>
@@ -710,6 +733,7 @@
                         <strong>Mindfully Monitored</strong>
                     </h1>
                     <p>A privacy-first macOS app that lives in your menu bar, gently guiding you toward better posture. No cloud, no tracking - just you and your wellness.</p>
+                    <p class="beta-note">🧪 Early access — actively being tested.</p>
                     <div class="cta-group">
                         <a href="#download" class="btn btn-primary">Download for macOS</a>
                         <a href="#how-it-works" class="btn btn-secondary">Learn More</a>
