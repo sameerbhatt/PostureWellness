@@ -39,8 +39,8 @@ struct JointPoints {
         let (rightShoulderPoint, rightShoulderConf) = getPoint(.rightShoulder)
         let (leftEarPoint, leftEarConf) = getPoint(.leftEar)
         let (rightEarPoint, rightEarConf) = getPoint(.rightEar)
-        let (leftHipPoint, leftHipConf) = getPoint(.leftHip)
-        let (rightHipPoint, rightHipConf) = getPoint(.rightHip)
+        let (leftHipPoint, _) = getPoint(.leftHip)
+        let (rightHipPoint, _) = getPoint(.rightHip)
         
         self.nose = nosePoint
         self.neck = neckPoint
@@ -51,9 +51,13 @@ struct JointPoints {
         self.leftHip = leftHipPoint
         self.rightHip = rightHipPoint
         
-        // Calculate average confidence
+        // Average confidence over the core joints the analysis actually uses.
+        // Hips are excluded: when they're out of frame (the normal desk case),
+        // Vision still emits low-confidence phantom guesses for them, which
+        // dragged the average down and made solid head/shoulder detections
+        // look invalid.
         let confidences = [noseConf, neckConf, leftShoulderConf, rightShoulderConf,
-                          leftEarConf, rightEarConf, leftHipConf, rightHipConf]
+                          leftEarConf, rightEarConf]
         let validConfidences = confidences.filter { $0 > 0 }
         self.averageConfidence = validConfidences.isEmpty ? 0.0 : validConfidences.reduce(0, +) / Float(validConfidences.count)
     }
@@ -234,35 +238,22 @@ struct PostureCalculator {
         return angle
     }
     
-    // MARK: - Screen Distance (Placeholder)
-    
-    /// Estimate distance from screen
-    /// This is a placeholder - requires camera calibration for accuracy
-    /// Returns estimated distance in cm
-    static func estimateScreenDistance(joints: JointPoints, imageWidth: CGFloat) -> Double? {
-        // This is a simplified estimation
-        // In reality, we'd need:
-        // 1. Camera field of view
-        // 2. Known reference size (e.g., face width ~15cm)
-        // 3. Pixel-to-cm conversion
-        
-        guard let nose = joints.nose,
-              let leftEar = joints.leftEar,
-              let rightEar = joints.rightEar else {
-            return nil
-        }
-        
-        // Calculate face width in normalized coordinates
-        let faceWidth = abs(leftEar.x - rightEar.x)
-        
-        // Average human face width: ~15cm
-        // This is a ROUGH estimation - needs calibration
-        // Assuming: larger face in frame = closer to camera
-        
-        // Inverse relationship: smaller face width = farther distance
-        // This formula is a placeholder and will need real-world calibration
-        let estimatedDistance = (0.15 / max(faceWidth, 0.01)) * 100.0
-        
+    // MARK: - Screen Distance (Rough Estimate)
+
+    /// Estimate distance from screen using the detected face size.
+    /// Pinhole-camera approximation with an assumed webcam field of view -
+    /// still a rough estimate that needs per-camera calibration for real accuracy.
+    /// Returns estimated distance in cm.
+    static func estimateScreenDistance(faceBoundingBoxWidth: CGFloat) -> Double? {
+        // Ignore implausibly small detections
+        guard faceBoundingBoxWidth > 0.02 else { return nil }
+
+        // Pinhole model: normalizedWidth = realWidth / (2 * distance * tan(hfov/2))
+        // Average adult head width ~14.5cm; typical Mac webcam horizontal FOV ~65°
+        let headWidthCm = 14.5
+        let halfFovTan = tan(65.0 / 2.0 * .pi / 180.0)
+        let estimatedDistance = headWidthCm / (Double(faceBoundingBoxWidth) * 2.0 * halfFovTan)
+
         // Clamp to reasonable range
         return min(max(estimatedDistance, 30), 150)
     }

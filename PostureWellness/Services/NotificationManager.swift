@@ -133,15 +133,24 @@ class NotificationManager: NSObject {
         guard let lastTime = lastNotificationTime else {
             return true // Never sent before
         }
-        
-        let minInterval = TimeInterval(config.notifications.min_interval_minutes * 60)
+
+        // Strict means "immediate": don't hold notifications back for the usual
+        // minimum interval. A 60s floor remains so rapid manual captures can't spam.
+        // Other modes keep the configured interval (default 5 min) to stay unobtrusive.
+        let minInterval: TimeInterval
+        if currentMode == .strict {
+            minInterval = 60
+        } else {
+            minInterval = TimeInterval(config.notifications.min_interval_minutes * 60)
+        }
+
         let timeSinceLastNotification = Date().timeIntervalSince(lastTime)
-        
+
         if timeSinceLastNotification < minInterval {
             print("🔕 Skipping notification (too soon, \(Int(minInterval - timeSinceLastNotification))s remaining)")
             return false
         }
-        
+
         return true
     }
     

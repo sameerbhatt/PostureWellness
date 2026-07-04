@@ -1,11 +1,11 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "neck": {
     "good_max": 10,
-    "minor_max": 20,
-    "poor_threshold": 21,
-    "weight_minor": 10,
-    "weight_poor": 25
+    "minor_max": 18,
+    "poor_threshold": 28,
+    "weight_minor": 12,
+    "weight_poor": 45
   },
   "shoulders": {
     "symmetry_good_max": 2,
@@ -15,15 +15,15 @@
     "rounding_minor_max": 25,
     "rounding_poor_threshold": 26,
     "weight_minor": 10,
-    "weight_poor": 20,
-    "weight_both_issues": 30
+    "weight_poor": 40,
+    "weight_both_issues": 45
   },
   "torso": {
     "good_max": 15,
     "minor_max": 25,
     "poor_threshold": 26,
     "weight_minor": 10,
-    "weight_poor": 25
+    "weight_poor": 40
   },
   "distance": {
     "good_min": 50,
@@ -32,8 +32,8 @@
     "minor_max": 85,
     "poor_min": 0,
     "poor_max": 999,
-    "weight_minor": 5,
-    "weight_poor": 15,
+    "weight_minor": 8,
+    "weight_poor": 20,
     "auto_detect_enabled": false,
     "manual_distance": 60
   },
@@ -41,10 +41,10 @@
     "good_max": 45,
     "minor_max": 60,
     "poor_threshold": 61,
-    "weight_minor": 5,
-    "weight_poor": 15,
+    "weight_minor": 8,
+    "weight_poor": 30,
     "reset_on_movement": true,
-    "movement_threshold": 0.3
+    "movement_threshold": 0.08
   },
   "break_reminder": {
     "enabled": true,

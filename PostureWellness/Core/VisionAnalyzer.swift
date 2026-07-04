@@ -11,254 +11,196 @@ import CoreImage
 // MARK: - Vision Analyzer
 
 class VisionAnalyzer {
-    
+
     private let config: PostureConfig
     private let evaluator: PostureEvaluator
-    
+
     // Track sitting duration
     private var sittingStartTime: Date?
     private var lastPersonDetectedTime: Date?
     private var lastSignificantPosition: CGPoint?
-    
+
     init(config: PostureConfig = ConfigurationManager.shared.config) {
         self.config = config
         self.evaluator = PostureEvaluator(config: config)
     }
-    
+
     // MARK: - Main Analysis Function
-    
-    /// Analyze a captured image for posture
-    /// - Parameter image: The captured camera frame (CIImage or CGImage)
-    /// - Returns: PostureReading with analysis results
+
+    /// Analyze a captured image for posture.
+    ///
+    /// Face-first hybrid: face detection is the primary signal because it is far
+    /// more reliable than body pose on close-up webcam framing (head + shoulders
+    /// filling the frame), and it reports head roll/pitch/yaw directly. Body pose
+    /// is used opportunistically for shoulder symmetry when shoulders are visible.
+    ///
+    /// Metrics a frontal 2D camera cannot measure (shoulder rounding, hip-based
+    /// torso slouch - both sagittal-plane angles) are intentionally not reported.
     func analyzePosture(image: CIImage, imageWidth: CGFloat = 1920) -> PostureReading {
-        
-        // ✅ Convert to CGImage first, then back to CIImage
-        // This ensures proper format for Vision framework
+
+        // Convert to CGImage - ensures proper format for Vision framework
         let context = CIContext()
         guard let cgImage = context.createCGImage(image, from: image.extent) else {
             print("❌ Failed to convert to CGImage")
             return PostureReading.unknown(confidence: 0.0)
         }
-        
-        // Create fresh CIImage from CGImage
-        let processedImage = CIImage(cgImage: cgImage)
-        
-        print("🎯 Processed image for Vision:")
-        print("   Original extent: \(image.extent)")
-        print("   Processed extent: \(processedImage.extent)")
-        print("   CGImage size: \(cgImage.width)x\(cgImage.height)")
-        
-        // Try different orientations
-        let orientationsToTry: [CGImagePropertyOrientation] = [
-            .up,            // rawValue: 1
-            .upMirrored,    // rawValue: 2
-            .leftMirrored,  // rawValue: 5
-            .rightMirrored  // rawValue: 7
-        ]
-        
-        var bestConfidence: Double = 0.0
-        
-        for orientation in orientationsToTry {
-            print("🔄 Trying orientation: \(orientation.rawValue)")
-            
-            let semaphore = DispatchSemaphore(value: 0)
-            var result: PostureReading?
-            
-            // Create Vision request
-            let request = VNDetectHumanBodyPoseRequest { request, error in
-                if let error = error {
-                    print("❌ Vision error: \(error.localizedDescription)")
-                    result = PostureReading.unknown(confidence: 0.0)
-                    semaphore.signal()
-                    return
-                }
-                
-                // Get the first detected person
-                guard let observations = request.results as? [VNHumanBodyPoseObservation] else {
-                    print("   ❌ No results")
-                    result = PostureReading.unknown(confidence: 0.0)
-                    semaphore.signal()
-                    return
-                }
-                
-                print("   🔍 Detected \(observations.count) person(s)")
-                
-                guard let observation = observations.first else {
-                    print("   ⚠️ No person in results")
-                    result = PostureReading.unknown(confidence: 0.0)
-                    semaphore.signal()
-                    return
-                }
-                
-                // Extract joint points
-                let joints = JointPoints(from: observation)
-                
-                print("   📊 Joint confidence: \(String(format: "%.2f", joints.averageConfidence))")
-                print("   📊 Has minimum joints: \(joints.hasMinimumJoints)")
-                
-                // Check if we have minimum required joints - More lenient check
-                guard joints.hasMinimumJoints else {
-                    print("⚠️ Insufficient joints detected")
-                    print("   Available: nose=\(joints.nose != nil), neck=\(joints.neck != nil), ears=\(joints.leftEar != nil || joints.rightEar != nil), shoulders=\(joints.leftShoulder != nil || joints.rightShoulder != nil)")
-                    result = PostureReading.unknown(confidence: Double(joints.averageConfidence))
-                    semaphore.signal()
-                    return
-                }
-                
-                print("   ✅ Valid detection! Confidence: \(String(format: "%.2f", joints.averageConfidence))")
-                
-                // Debug: Print detected joints
-                let jointNames: [VNHumanBodyPoseObservation.JointName] = [
-                    .nose, .neck, .leftShoulder, .rightShoulder,
-                    .leftEar, .rightEar, .leftHip, .rightHip
-                ]
-                
-                for jointName in jointNames {
-                    if let point = try? observation.recognizedPoint(jointName) {
-                        let conf = point.confidence
-                        if conf > 0.3 {
-                            let emoji = conf > 0.7 ? "✅" : "⚠️"
-                            print("      \(emoji) \(jointName.rawValue): \(String(format: "%.2f", conf))")
-                        }
-                    }
-                }
-                
-                // Update sitting duration tracking
-                self.updateSittingDuration(joints: joints)
-                
-                // Calculate all metrics
-                let neckAngles = PostureCalculator.calculateNeckAngle(joints: joints)
-                let neckAngle = neckAngles?.forward
-                let neckSideTilt = neckAngles?.side ?? 0
-                let shoulderSymmetry = PostureCalculator.calculateShoulderSymmetry(joints: joints)
-                let shoulderRounding = PostureCalculator.calculateShoulderRounding(joints: joints)
-                let torsoAngle = PostureCalculator.calculateTorsoAngle(joints: joints)
-                
-                // Screen distance estimation
-                let screenDistance: Double?
-                if self.config.distance.auto_detect_enabled {
-                    screenDistance = PostureCalculator.estimateScreenDistance(joints: joints, imageWidth: imageWidth)
-                } else {
-                    screenDistance = self.config.distance.manual_distance
-                }
-                
-                // Get sitting duration in minutes
-                let sittingMinutes = self.getCurrentSittingDuration()
-                
-                // Debug output
-                print("   📊 Measurements:")
-                if let neck = neckAngle {
-                    print("      Neck: \(String(format: "%.1f°", neck))")
-                }
-                if let symmetry = shoulderSymmetry {
-                    print("      Shoulder symmetry: \(String(format: "%.1f cm", symmetry))")
-                }
-                if let rounding = shoulderRounding {
-                    print("      Shoulder rounding: \(String(format: "%.1f°", rounding))")
-                }
-                if let torso = torsoAngle {
-                    print("      Torso: \(String(format: "%.1f°", torso))")
-                } else {
-                    print("      Torso: N/A (hips not visible)")
-                }
-                
-                // Evaluate posture
-                result = self.evaluator.evaluate(
-                    neckAngle: neckAngle,
-                    neckSideTilt: neckSideTilt,
-                    shoulderSymmetry: shoulderSymmetry,
-                    shoulderRounding: shoulderRounding,
-                    torsoAngle: torsoAngle,
-                    screenDistance: screenDistance,
-                    sittingDuration: sittingMinutes,
-                    jointPositions: JointPositions(from: joints),
-                    confidence: Double(joints.averageConfidence)
-                )
-                
-                semaphore.signal()
-            }
-            
-            // Perform the request with current orientation
-            let handler = VNImageRequestHandler(ciImage: processedImage, orientation: orientation, options: [:])
-            
-            do {
-                try handler.perform([request])
-            } catch {
-                print("   ❌ Request failed: \(error.localizedDescription)")
-                continue
-            }
-            
-            // Wait for completion
-            _ = semaphore.wait(timeout: .now() + 2.0)
-            
-            if let r = result {
-                print("Result is valid \(r.isValid) (confidence: \(String(format: "%.2f", r.confidence)))")
-            } else {
-                print("Result is nil after Vision request")
-            }
-            
-            // Use the first orientation that produces a valid reading, rather than
-            // shopping for the highest confidence across all four. Vision's per-joint
-            // confidence is roughly orientation-agnostic, so a mirrored/rotated guess
-            // could win by noise alone over the correct .up orientation - and once a
-            // wrong orientation "wins," every downstream angle in PostureCalculator is
-            // computed against the wrong vertical axis and swapped left/right joints,
-            // producing incorrect issues (wrong-side tilt, bogus rounding/symmetry).
-            if let result = result {
-                print("   Result: valid=\(result.isValid), confidence=\(String(format: "%.2f", result.confidence)), score=\(result.overallScore)")
 
-                if result.isValid {
-                    print("✅ Using orientation \(orientation.rawValue) (confidence: \(String(format: "%.2f", result.confidence)))")
-                    return result
-                }
+        print("🎯 Analyzing frame (\(cgImage.width)x\(cgImage.height))")
 
-                bestConfidence = max(bestConfidence, result.confidence)
-            }
+        // Mac cameras deliver upright frames, so a single .up pass suffices.
+        let faceRequest = VNDetectFaceRectanglesRequest()
+        let bodyRequest = VNDetectHumanBodyPoseRequest()
+        let handler = VNImageRequestHandler(cgImage: cgImage, orientation: .up, options: [:])
+
+        do {
+            try handler.perform([faceRequest, bodyRequest])
+        } catch {
+            print("❌ Vision request failed: \(error.localizedDescription)")
+            return PostureReading.unknown(confidence: 0.0)
         }
 
-        // No orientation produced a valid reading
-        print("❌ No detection with sufficient confidence in any orientation (minimum 0.15 required)")
-        print("   Best confidence achieved: \(String(format: "%.2f", bestConfidence))")
-        return PostureReading.unknown(confidence: bestConfidence)
+        // Largest face in frame = the user (ignores smaller faces in the background)
+        let face = faceRequest.results?.max(by: { $0.boundingBox.width < $1.boundingBox.width })
+        let joints = bodyRequest.results?.first.map { JointPoints(from: $0) }
+
+        if let face = face {
+            print("   ✅ Face detected (confidence \(String(format: "%.2f", face.confidence)))")
+        } else {
+            print("   ⚠️ No face detected")
+        }
+        if let joints = joints {
+            print("   📊 Body pose: core joint confidence \(String(format: "%.2f", joints.averageConfidence)), minimum joints: \(joints.hasMinimumJoints)")
+        } else {
+            print("   ⚠️ No body pose detected")
+        }
+
+        guard face != nil || (joints?.hasMinimumJoints ?? false) else {
+            return handleNoPersonDetected()
+        }
+
+        // Presence position for sitting/movement tracking: face center, else head/neck
+        let presencePosition: CGPoint?
+        if let box = face?.boundingBox {
+            presencePosition = CGPoint(x: box.midX, y: box.midY)
+        } else {
+            presencePosition = joints?.neck ?? joints?.nose
+        }
+        updateSittingDuration(position: presencePosition)
+
+        // --- Head pose (from face - the reliable source) ---
+        var neckAngle: Double? = nil
+        var neckSideTilt: Double = 0
+
+        if let face = face {
+            if let roll = face.roll?.doubleValue {
+                neckSideTilt = abs(roll * 180.0 / .pi)
+            }
+            if let pitch = face.pitch?.doubleValue {
+                let pitchDegrees = pitch * 180.0 / .pi
+                // Use the nod magnitude - tilting far up or down both strain the
+                // neck. Vision's pitch sign convention is not clearly documented,
+                // so the raw signed value is logged to let beta feedback refine
+                // direction-specific guidance later.
+                neckAngle = abs(pitchDegrees)
+                print("   📐 Head pitch: \(String(format: "%+.1f°", pitchDegrees))")
+            }
+            if let yaw = face.yaw?.doubleValue {
+                // Logged only for now - sustained head rotation (monitor off to
+                // the side) is a candidate future metric.
+                print("   📐 Head yaw: \(String(format: "%+.1f°", yaw * 180.0 / .pi))")
+            }
+        } else if let joints = joints,
+                  let angles = PostureCalculator.calculateNeckAngle(joints: joints) {
+            // Body-pose fallback: only side tilt is trustworthy from the frontal
+            // projection (both-ears formula); forward tilt stays nil because the
+            // frontal 2D view cannot measure it.
+            neckSideTilt = angles.side
+        }
+
+        // --- Shoulders (from body pose, when visible) ---
+        let shoulderSymmetry = joints.flatMap { PostureCalculator.calculateShoulderSymmetry(joints: $0) }
+
+        // --- Screen distance ---
+        let screenDistance: Double?
+        if config.distance.auto_detect_enabled {
+            screenDistance = face.flatMap { PostureCalculator.estimateScreenDistance(faceBoundingBoxWidth: $0.boundingBox.width) }
+        } else {
+            screenDistance = config.distance.manual_distance
+        }
+
+        let sittingMinutes = getCurrentSittingDuration()
+
+        // Overall confidence: face detection confidence when a face was found
+        // (the primary signal), otherwise core body-joint confidence.
+        let confidence: Double
+        if let face = face {
+            confidence = Double(face.confidence)
+        } else {
+            confidence = Double(joints?.averageConfidence ?? 0)
+        }
+
+        print("   📊 Measurements:")
+        if let neck = neckAngle {
+            print("      Neck pitch: \(String(format: "%.1f°", neck))")
+        }
+        print("      Side tilt: \(String(format: "%.1f°", neckSideTilt))")
+        if let symmetry = shoulderSymmetry {
+            print("      Shoulder symmetry: \(String(format: "%.1f cm", symmetry))")
+        } else {
+            print("      Shoulder symmetry: N/A (shoulders not visible)")
+        }
+
+        return evaluator.evaluate(
+            neckAngle: neckAngle,
+            neckSideTilt: neckSideTilt,
+            shoulderSymmetry: shoulderSymmetry,
+            shoulderRounding: nil,   // not measurable from a frontal 2D view
+            torsoAngle: nil,         // needs hips + side view; revisit with baseline calibration
+            screenDistance: screenDistance,
+            sittingDuration: sittingMinutes,
+            jointPositions: joints.map { JointPositions(from: $0) },
+            confidence: confidence
+        )
     }
-    
+
     // MARK: - Sitting Duration Tracking
-    
-    private func updateSittingDuration(joints: JointPoints) {
+
+    private func updateSittingDuration(position: CGPoint?) {
         let now = Date()
-        
+
         // Initialize if first detection
         if sittingStartTime == nil {
             sittingStartTime = now
             lastPersonDetectedTime = now
-            lastSignificantPosition = joints.neck ?? joints.nose
+            lastSignificantPosition = position
             return
         }
-        
+
         lastPersonDetectedTime = now
-        
+
         // Check for significant movement (if enabled)
-        if config.sitting.reset_on_movement {
-            if let currentPos = joints.neck ?? joints.nose,
-               let lastPos = lastSignificantPosition {
-                
-                // Calculate movement distance
-                let dx = currentPos.x - lastPos.x
-                let dy = currentPos.y - lastPos.y
-                let distance = sqrt(dx * dx + dy * dy)
-                
-                // If movement exceeds threshold, reset sitting timer
-                if distance > CGFloat(config.sitting.movement_threshold) {
-                    print("🚶 Significant movement detected, resetting sitting timer")
-                    sittingStartTime = now
-                    lastSignificantPosition = currentPos
-                }
+        if config.sitting.reset_on_movement,
+           let currentPos = position,
+           let lastPos = lastSignificantPosition {
+
+            // Calculate movement distance
+            let dx = currentPos.x - lastPos.x
+            let dy = currentPos.y - lastPos.y
+            let distance = sqrt(dx * dx + dy * dy)
+
+            // If movement exceeds threshold, reset sitting timer
+            if distance > CGFloat(config.sitting.movement_threshold) {
+                print("🚶 Significant movement detected, resetting sitting timer")
+                sittingStartTime = now
+                lastSignificantPosition = currentPos
             }
         }
     }
-    
+
     private func handleNoPersonDetected() -> PostureReading {
-        // If person not detected for >5 seconds, reset sitting timer
+        // If person not detected for >5 seconds, reset sitting timer.
+        // With captures minutes apart, a single empty capture qualifies -
+        // resetting too eagerly is the safe direction (fewer false sitting alarms).
         if let lastSeen = lastPersonDetectedTime,
            Date().timeIntervalSince(lastSeen) > 5.0 {
             print("👋 Person left frame, resetting sitting timer")
@@ -266,21 +208,20 @@ class VisionAnalyzer {
             lastPersonDetectedTime = nil
             lastSignificantPosition = nil
         }
-        
+
         return PostureReading.unknown(confidence: 0.0)
     }
-    
+
     private func getCurrentSittingDuration() -> Int {
         guard let startTime = sittingStartTime else { return 0 }
         let duration = Date().timeIntervalSince(startTime)
         return Int(duration / 60.0)  // Convert to minutes
     }
-    
+
     // MARK: - Reset
-    
+
     func resetSittingTimer() {
         sittingStartTime = Date()
         print("🔄 Sitting timer manually reset")
     }
 }
-

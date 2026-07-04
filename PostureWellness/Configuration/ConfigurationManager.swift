@@ -41,19 +41,27 @@ class ConfigurationManager {
     // MARK: - Loading Configuration
     
     private static func loadConfiguration() throws -> PostureConfig {
+        let defaultConfig = try loadDefaultConfig()
+
         // Try to load user config first
         if let userConfig = try? loadUserConfig() {
-            print("📄 Loaded user configuration")
-            return userConfig
+            // Refresh stale configs: when the bundled defaults version changes
+            // (e.g., recalibrated scoring weights), replace the saved user copy -
+            // otherwise threshold fixes never reach machines that saved an older
+            // config. Note: this discards manual edits to the user config file
+            // on version bumps (acceptable during beta).
+            if userConfig.version == defaultConfig.version {
+                print("📄 Loaded user configuration")
+                return userConfig
+            }
+            print("🔄 User config v\(userConfig.version) is outdated (bundled v\(defaultConfig.version)) - refreshing to new defaults")
+        } else {
+            print("📄 Loading default configuration")
         }
-        
-        // Fall back to default config
-        print("📄 Loading default configuration")
-        let defaultConfig = try loadDefaultConfig()
-        
+
         // Save default as user config for future edits
         try? saveUserConfig(defaultConfig)
-        
+
         return defaultConfig
     }
     

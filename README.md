@@ -13,9 +13,9 @@ A privacy-first macOS app that monitors your posture while working on your compu
 
 ## System Requirements
 
-- macOS 11.0 (Big Sur) or later
+- macOS 12.0 (Monterey) or later
 - Built-in or external camera
-- Recommended: macOS 13.0+ for full Analytics features
+- Recommended: macOS 13.0+ for analytics charts
 
 ## Running the App
 

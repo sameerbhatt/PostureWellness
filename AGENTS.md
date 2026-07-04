@@ -15,10 +15,10 @@ This file provides context for AI assistants (like Codex) working on this codeba
 ## Core Architecture
 
 ### Technology Stack
-- **Platform:** macOS 11.0+ (Big Sur and later)
+- **Platform:** macOS 12.0+ (MACOSX_DEPLOYMENT_TARGET = 12.0; floor set by VNFaceObservation.pitch. Analytics charts need 13.0+, guarded with #available)
 - **Language:** Swift 5.x
 - **UI Framework:** SwiftUI + AppKit hybrid
-- **Computer Vision:** Apple Vision framework (`VNDetectHumanBodyPoseRequest`)
+- **Computer Vision:** Apple Vision framework (`VNDetectFaceRectanglesRequest` primary + `VNDetectHumanBodyPoseRequest` for shoulders)
 - **Storage:** JSON (configuration), file-based (analytics)
 - **App Type:** Menu bar agent (LSUIElement, no dock icon)
 
@@ -102,22 +102,27 @@ cleanupAfterCapture() - SYNCHRONOUS cleanup
 - Reuse camera session - leads to "session not running" errors
 - Skip warmup delay - frames won't be ready
 
-### 2. Vision Detection Thresholds
+### 2. Detection Pipeline (Face-First Hybrid)
 
-**Confidence threshold:** 0.20 (lowered from initial 0.70)
-- Real-world conditions produce 0.2-0.5 confidence
-- Anything above 0.15 is considered valid
-- Higher thresholds reject too many valid detections
+Face detection (`VNDetectFaceRectanglesRequest`) is the PRIMARY signal:
+- Near-100% reliable on close-up webcam framing, unlike body pose
+- Provides head roll (side tilt), pitch (forward/back nod), yaw directly
+- Face confidence gates reading validity (floor: 0.15 in PostureEvaluator)
 
-**Joint requirements:** Very lenient
-- Minimum: Head point (nose/ear) + reference point (neck/shoulder)
-- Hip joints are OPTIONAL (often not visible when sitting)
-- Can work with partial body visibility
+Body pose (`VNDetectHumanBodyPoseRequest`) is used opportunistically:
+- Only for shoulder symmetry when shoulders are visible
+- Its confidence is computed from core joints only (hips excluded - Vision
+  emits phantom low-confidence hip guesses when hips are out of frame)
+
+NOT reported (a frontal 2D camera cannot measure these sagittal-plane angles):
+- Shoulder rounding
+- Torso slouch (revisit with per-user baseline calibration - see Phase 2)
 
 **DO NOT:**
-- Raise confidence threshold above 0.30
-- Require hips for basic detection
-- Reject readings with asymmetric joint visibility
+- Return to body-pose-only detection (fails on head-and-shoulders framing)
+- Compute forward neck tilt from 2D body-pose angles (measures lateral lean, not forward tilt)
+- Include hip joints in confidence averages
+- Reintroduce the multi-orientation retry loop (a mirrored/rotated guess can win by noise and scramble left/right + vertical axes)
 
 ### 3. Configuration System
 
@@ -179,13 +184,13 @@ Send notification with guidance
 ## Posture Analysis Metrics
 
 ### Detected Issues
-1. **Neck Forward Tilt** - Ear-neck-shoulder angle from vertical
-2. **Neck Side Tilt** - Left/right head tilt (both ears or asymmetric)
-3. **Shoulder Symmetry** - Height difference between shoulders
-4. **Shoulder Rounding** - Forward roll of shoulders
-5. **Torso Slouch** - Neck-hip angle from vertical (if hips visible)
-6. **Screen Distance** - Manual configuration (auto-detect unreliable)
-7. **Sitting Duration** - Time elapsed with movement detection
+1. **Neck Forward Tilt** - Head pitch from face detection (nod magnitude)
+2. **Neck Side Tilt** - Head roll from face detection (body-pose both-ears fallback)
+3. **Shoulder Symmetry** - Height difference between shoulders (body pose, scaled by in-frame shoulder width)
+4. **Shoulder Rounding** - NOT REPORTED (sagittal-plane angle, unmeasurable from frontal 2D view)
+5. **Torso Slouch** - NOT REPORTED (pending per-user baseline calibration, Phase 2)
+6. **Screen Distance** - Manual configuration (auto-detect estimates from face size)
+7. **Sitting Duration** - Time elapsed; resets on absence from frame or significant movement
 
 ### Calculation Methods
 

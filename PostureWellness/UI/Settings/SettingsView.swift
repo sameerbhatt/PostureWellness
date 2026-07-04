@@ -78,7 +78,7 @@ struct SettingsView: View {
                     
                     HStack {
                         Slider(value: $captureInterval, in: 60...900, step: 60)
-                            .onChange(of: captureInterval) {
+                            .onChange(of: captureInterval) { _ in
                                 saveSettings()
                             }
                         
@@ -97,14 +97,14 @@ struct SettingsView: View {
                 // Battery options
                 VStack(alignment: .leading, spacing: 8) {
                     Toggle("Run on battery power", isOn: $runOnBattery)
-                        .onChange(of: runOnBattery) {
+                        .onChange(of: runOnBattery) { _ in
                             saveSettings()
                         }
                     
                     if runOnBattery {
                         Toggle("Reduce frequency on battery", isOn: $reduceFrequencyOnBattery)
                             .padding(.leading, 20)
-                            .onChange(of: reduceFrequencyOnBattery) {
+                            .onChange(of: reduceFrequencyOnBattery) { _ in
                                 saveSettings()
                             }
                         
@@ -134,7 +134,7 @@ struct SettingsView: View {
                     }
                     .pickerStyle(.menu)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .onChange(of: sittingWarningMinutes) {
+                    .onChange(of: sittingWarningMinutes) { _ in
                         saveSettings()
                     }
                     
@@ -157,14 +157,14 @@ struct SettingsView: View {
                     }
                     .pickerStyle(.segmented)
                     .frame(width: 200)
-                    .onChange(of: autoDetectDistance) {
+                    .onChange(of: autoDetectDistance) { _ in
                         saveSettings()
                     }
                     
                     if !autoDetectDistance {
                         HStack {
                             Slider(value: $manualDistance, in: 40...80, step: 5)
-                                .onChange(of: manualDistance) {
+                                .onChange(of: manualDistance) { _ in
                                     saveSettings()
                                 }
                             
@@ -188,7 +188,7 @@ struct SettingsView: View {
                         .fontWeight(.medium)
                     
                     Toggle("Enable break reminders", isOn: $breakRemindersEnabled)
-                        .onChange(of: breakRemindersEnabled) {
+                        .onChange(of: breakRemindersEnabled) { _ in
                             saveSettings()
                             updateBreakReminders()
                         }
@@ -203,7 +203,7 @@ struct SettingsView: View {
                         .pickerStyle(.menu)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.leading, 20)
-                        .onChange(of: breakInterval) {
+                        .onChange(of: breakInterval) { _ in
                             saveSettings()
                             updateBreakReminders()
                         }
@@ -242,7 +242,7 @@ struct SettingsView: View {
                     }
                     .pickerStyle(.menu)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .onChange(of: notificationMode) { oldValue, newValue in
+                    .onChange(of: notificationMode) { newValue in
                         saveSettings()
                         updateNotificationMode(newValue)
                     }
@@ -269,7 +269,7 @@ struct SettingsView: View {
                     }
                     .pickerStyle(.menu)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .onChange(of: dismissDuration) {
+                    .onChange(of: dismissDuration) { _ in
                         saveSettings()
                     }
                     
@@ -305,7 +305,7 @@ struct SettingsView: View {
                     }
                     .pickerStyle(.menu)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .onChange(of: dataRetentionDays) {
+                    .onChange(of: dataRetentionDays) { _ in
                         saveSettings()
                     }
                     

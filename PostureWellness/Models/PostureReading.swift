@@ -314,35 +314,48 @@ struct PostureEvaluator {
     // Calculate overall score (0-100)
     private func calculateScore(issues: [Issue]) -> Int {
         var score = config.scoring.base_score
-        
+
         for issue in issues {
             switch issue.type {
             case .neck, .neckSideTilt:
-                score -= issue.severity == .significant ? config.neck.weight_poor : config.neck.weight_minor
-                
+                score -= deduction(for: issue.severity, minor: config.neck.weight_minor, poor: config.neck.weight_poor)
+
             case .shoulderSymmetry, .shoulderRounding:
                 // Check if both shoulder issues exist
                 let hasSymmetry = issues.contains { $0.type == .shoulderSymmetry }
                 let hasRounding = issues.contains { $0.type == .shoulderRounding }
-                
+
                 if hasSymmetry && hasRounding {
                     score -= config.shoulders.weight_both_issues
                 } else {
-                    score -= issue.severity == .significant ? config.shoulders.weight_poor : config.shoulders.weight_minor
+                    score -= deduction(for: issue.severity, minor: config.shoulders.weight_minor, poor: config.shoulders.weight_poor)
                 }
-                
+
             case .slouch:
-                score -= issue.severity == .significant ? config.torso.weight_poor : config.torso.weight_minor
-                
+                score -= deduction(for: issue.severity, minor: config.torso.weight_minor, poor: config.torso.weight_poor)
+
             case .distance:
-                score -= issue.severity == .significant ? config.distance.weight_poor : config.distance.weight_minor
-                
+                score -= deduction(for: issue.severity, minor: config.distance.weight_minor, poor: config.distance.weight_poor)
+
             case .sitting:
-                score -= issue.severity == .significant ? config.sitting.weight_poor : config.sitting.weight_minor
+                score -= deduction(for: issue.severity, minor: config.sitting.weight_minor, poor: config.sitting.weight_poor)
             }
         }
-        
+
         return max(0, score)
+    }
+
+    // Moderate issues previously deducted only the minor weight, which let
+    // clearly-bad readings keep "Good" scores.
+    private func deduction(for severity: Severity, minor: Int, poor: Int) -> Int {
+        switch severity {
+        case .minor:
+            return minor
+        case .moderate:
+            return (minor + poor + 1) / 2
+        case .significant:
+            return poor
+        }
     }
     
     // Determine status from score
