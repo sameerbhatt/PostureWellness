@@ -240,8 +240,13 @@ struct PostureEvaluator {
         confidence: Double
     ) -> PostureReading {
         
-        // If confidence is too low, return unknown reading
-        guard confidence >= config.vision.confidence_threshold else {
+        // If confidence is too low, return unknown reading.
+        // Uses the same hardcoded 0.15 floor as PostureReading.isValid rather than
+        // config.vision.confidence_threshold (0.20) - otherwise every reading in the
+        // 0.15-0.20 band (the normal real-world range per Vision framework testing)
+        // gets marked .unknown here, which makes isValid false regardless of the
+        // outer VisionAnalyzer fallback that's meant to accept down to 0.15.
+        guard confidence >= 0.15 else {
             return PostureReading.unknown(confidence: confidence)
         }
         

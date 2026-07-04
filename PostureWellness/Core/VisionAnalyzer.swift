@@ -56,7 +56,6 @@ class VisionAnalyzer {
             .rightMirrored  // rawValue: 7
         ]
         
-        var bestResult: PostureReading?
         var bestConfidence: Double = 0.0
         
         for orientation in orientationsToTry {
@@ -198,33 +197,29 @@ class VisionAnalyzer {
                 print("Result is nil after Vision request")
             }
             
-            // Check if this result is better
+            // Use the first orientation that produces a valid reading, rather than
+            // shopping for the highest confidence across all four. Vision's per-joint
+            // confidence is roughly orientation-agnostic, so a mirrored/rotated guess
+            // could win by noise alone over the correct .up orientation - and once a
+            // wrong orientation "wins," every downstream angle in PostureCalculator is
+            // computed against the wrong vertical axis and swapped left/right joints,
+            // producing incorrect issues (wrong-side tilt, bogus rounding/symmetry).
             if let result = result {
                 print("   Result: valid=\(result.isValid), confidence=\(String(format: "%.2f", result.confidence)), score=\(result.overallScore)")
-                
-                if result.isValid && result.confidence > bestConfidence {
-                    bestResult = result
-                    bestConfidence = result.confidence
-                    print("   🎯 Best result so far!")
+
+                if result.isValid {
+                    print("✅ Using orientation \(orientation.rawValue) (confidence: \(String(format: "%.2f", result.confidence)))")
+                    return result
                 }
-            }
-            
-            // If we got a good result, use it
-            if let best = bestResult, best.confidence > 0.20 {
-                print("✅ Using orientation \(orientation.rawValue) (confidence: \(String(format: "%.2f", best.confidence)))")
-                return best
+
+                bestConfidence = max(bestConfidence, result.confidence)
             }
         }
-        
-        // Return best result found, or unknown if none worked
-        if let best = bestResult, best.confidence > 0.15 {
-            print("✅ Best detection found: confidence \(String(format: "%.2f", best.confidence))")
-            return best
-        } else {
-            print("❌ No detection with sufficient confidence (minimum 0.15 required)")
-            print("   Best confidence achieved: \(String(format: "%.2f", bestConfidence))")
-            return PostureReading.unknown(confidence: bestConfidence)
-        }
+
+        // No orientation produced a valid reading
+        print("❌ No detection with sufficient confidence in any orientation (minimum 0.15 required)")
+        print("   Best confidence achieved: \(String(format: "%.2f", bestConfidence))")
+        return PostureReading.unknown(confidence: bestConfidence)
     }
     
     // MARK: - Sitting Duration Tracking

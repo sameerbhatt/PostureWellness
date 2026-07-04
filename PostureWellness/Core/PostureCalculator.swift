@@ -129,11 +129,12 @@ struct PostureCalculator {
                 let tiltRadians = asin(min(earHeightDiff / earDistance, 1.0))
                 sideTilt = tiltRadians * 180.0 / .pi
             }
-        } else if let ear = joints.leftEar ?? joints.rightEar, let neck = joints.neck {
-            // Only one ear - rough estimate based on horizontal offset
-            let horizontalOffset = abs(ear.x - neck.x)
-            sideTilt = min(horizontalOffset * 60, 30) // Rough heuristic
         }
+        // With only one ear visible, a horizontal ear/neck offset can't be
+        // distinguished from head yaw (turning) vs. actual side tilt (roll),
+        // and the previous heuristic saturated to a "significant" tilt from
+        // a few percent of frame width - well within normal detection jitter.
+        // Skip the estimate rather than guess; side tilt needs both ears.
         
         return (forward: forwardAngle, side: sideTilt)
     }
@@ -150,12 +151,18 @@ struct PostureCalculator {
         
         // Y difference in normalized coordinates (0-1)
         let yDiff = abs(left.y - right.y)
-        
-        // Estimate: Assume average person's shoulder width is ~45cm
-        // and normalized coordinate span represents roughly body height (~170cm)
-        // This is a rough estimation - we'll refine with testing
-        let estimatedDiffCm = yDiff * 170.0
-        
+
+        // Scale using the shoulder-to-shoulder width visible in this frame as the
+        // calibration reference (avg adult shoulder width ~40cm), instead of
+        // assuming the normalized coordinate span equals full body height (170cm).
+        // A desk webcam shot is chest-up only, so the old assumption inflated the
+        // estimated cm difference several-fold and triggered false asymmetry issues.
+        let shoulderWidth = distance(left, right)
+        guard shoulderWidth > 0.01 else { return nil } // Avoid division by zero
+
+        let averageShoulderWidthCm = 40.0
+        let estimatedDiffCm = (yDiff / shoulderWidth) * averageShoulderWidthCm
+
         return estimatedDiffCm
     }
     
@@ -183,12 +190,14 @@ struct PostureCalculator {
             let angle = abs(angleBetweenVectors(neckToShoulder, hipToNeck))
             return angle
         } else {
-            // No hips - simplified calculation using horizontal deviation
-            let horizontalDeviation = abs(shoulder.x - neck.x)
-            let estimatedAngle = atan(horizontalDeviation / 0.1) * 180.0 / .pi
-            
-            print("   ⚠️ Shoulder rounding: Estimated without hips (\(String(format: "%.1f°", estimatedAngle)))")
-            return min(estimatedAngle, 45) // Cap at reasonable value
+            // No hips - forward roll fundamentally needs a hip-to-neck spine
+            // reference to distinguish rounding from head yaw or camera angle.
+            // The previous horizontal-deviation heuristic divided by a fixed 0.1
+            // (10% of frame width), so ordinary detection jitter alone routinely
+            // saturated it to "significant" rounding on a person sitting up straight.
+            // Skip the estimate rather than guess wrong.
+            print("   ⚠️ Shoulder rounding: Skipped (hips not visible, no reliable estimate)")
+            return nil
         }
     }
     

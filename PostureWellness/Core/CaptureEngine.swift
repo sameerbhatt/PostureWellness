@@ -115,8 +115,12 @@ class CaptureEngine: NSObject {
         let session = AVCaptureSession()
         session.sessionPreset = .high  // Balance between quality and performance
         
-        // Get camera device (prefer built-in wide angle)
-        guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front) ??
+        // Get camera device (prefer built-in wide angle).
+        // macOS built-in cameras report position .unspecified, not .front/.back
+        // (that distinction is iOS-only) - querying .front here always returned
+        // nil and silently fell through to the generic default device, which
+        // could pick an external webcam over the built-in camera if one was attached.
+        guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .unspecified) ??
                            AVCaptureDevice.default(for: .video) else {
             throw CaptureError.cameraNotAvailable
         }
