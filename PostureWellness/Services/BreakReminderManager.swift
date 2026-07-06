@@ -71,27 +71,10 @@ class BreakReminderManager {
         content.body = "You've been working for \(config.break_reminder.interval_minutes) minutes. Stand up, stretch, and rest your eyes."
         content.sound = .default
         
-        // Add actions
-        let takeBreakAction = UNNotificationAction(
-            identifier: "TAKE_BREAK_ACTION",
-            title: "Take Break",
-            options: .foreground
-        )
-        
-        let snoozeAction = UNNotificationAction(
-            identifier: "SNOOZE_BREAK_ACTION",
-            title: "Snooze 10 min",
-            options: []
-        )
-        
-        let category = UNNotificationCategory(
-            identifier: "BREAK_REMINDER",
-            actions: [takeBreakAction, snoozeAction],
-            intentIdentifiers: [],
-            options: []
-        )
-        
-        UNUserNotificationCenter.current().setNotificationCategories([category])
+        // Category (with "Take Break" / "Snooze" actions) is registered once
+        // in NotificationManager.registerNotificationCategories() - calling
+        // setNotificationCategories here would replace the whole set and wipe
+        // out the posture alert actions.
         content.categoryIdentifier = "BREAK_REMINDER"
         
         let request = UNNotificationRequest(

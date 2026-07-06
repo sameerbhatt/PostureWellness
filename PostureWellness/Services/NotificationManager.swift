@@ -66,22 +66,56 @@ class NotificationManager: NSObject {
     
     func setup() {
         requestNotificationPermission()
+        registerNotificationCategories()
     }
-    
+
     private func requestNotificationPermission() {
         let center = UNUserNotificationCenter.current()
         center.delegate = self
-        
+
         center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
             if let error = error {
                 print("❌ Notification permission error: \(error.localizedDescription)")
             } else if granted {
                 print("✅ Notification permission granted")
+                // Log how macOS will actually present our notifications (diagnostics only)
+                center.getNotificationSettings { settings in
+                    print("🔔 Notification settings: auth=\(settings.authorizationStatus.rawValue), alertStyle=\(settings.alertStyle.rawValue), sound=\(settings.soundSetting.rawValue)")
+                }
             } else {
                 print("⚠️ Notification permission denied")
             }
         }
     }
+
+    /// Register ALL notification categories once at startup.
+    /// setNotificationCategories REPLACES the whole set, so registering
+    /// per-send (as before) meant whichever notification fired last wiped
+    /// out the other's action buttons.
+    private func registerNotificationCategories() {
+        let postureCategory = UNNotificationCategory(
+            identifier: "POSTURE_ALERT",
+            actions: [
+                UNNotificationAction(identifier: "DISMISS_ACTION", title: "I'm Aware", options: []),
+                UNNotificationAction(identifier: "VIEW_ACTION", title: "View Details", options: .foreground)
+            ],
+            intentIdentifiers: [],
+            options: []
+        )
+
+        let breakCategory = UNNotificationCategory(
+            identifier: "BREAK_REMINDER",
+            actions: [
+                UNNotificationAction(identifier: "TAKE_BREAK_ACTION", title: "Take Break", options: .foreground),
+                UNNotificationAction(identifier: "SNOOZE_BREAK_ACTION", title: "Snooze 10 min", options: [])
+            ],
+            intentIdentifiers: [],
+            options: []
+        )
+
+        UNUserNotificationCenter.current().setNotificationCategories([postureCategory, breakCategory])
+    }
+
     
     // MARK: - Process Reading
     
@@ -182,27 +216,8 @@ class NotificationManager: NSObject {
             "issueCount": reading.issues.count
         ]
         
-        // Add "I'm Aware" action
-        let dismissAction = UNNotificationAction(
-            identifier: "DISMISS_ACTION",
-            title: "I'm Aware",
-            options: []
-        )
-        
-        let viewAction = UNNotificationAction(
-            identifier: "VIEW_ACTION",
-            title: "View Details",
-            options: .foreground
-        )
-        
-        let category = UNNotificationCategory(
-            identifier: "POSTURE_ALERT",
-            actions: [dismissAction, viewAction],
-            intentIdentifiers: [],
-            options: []
-        )
-        
-        UNUserNotificationCenter.current().setNotificationCategories([category])
+        // Category (with "I'm Aware" / "View Details" actions) is registered
+        // once in registerNotificationCategories()
         content.categoryIdentifier = "POSTURE_ALERT"
         
         // Create request

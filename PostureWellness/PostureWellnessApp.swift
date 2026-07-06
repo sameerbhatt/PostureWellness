@@ -392,8 +392,10 @@ class MonitoringService: NSObject, CaptureEngineDelegate {
             nsImage = NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
         }
         
-        // Analyze on background thread
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+        // Analyze on background thread at .default QoS - Vision's internal
+        // worker threads run at default, so calling perform() from a
+        // higher-QoS thread trips a priority-inversion hang-risk warning.
+        DispatchQueue.global(qos: .default).async { [weak self] in
             guard let self = self else { return }
             
             let reading = self.visionAnalyzer.analyzePosture(image: image, imageWidth: image.extent.width)
