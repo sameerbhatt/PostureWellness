@@ -236,6 +236,10 @@ class NotificationManager: NSObject {
                 self?.lastNotificationTime = Date()
             }
         }
+
+        // Experimental PoC: fires the same throttled trigger as the
+        // notification itself. No-ops unless enabled in Settings.
+        HardwareTriggerManager.shared.trigger()
     }
     
     // MARK: - Dismiss

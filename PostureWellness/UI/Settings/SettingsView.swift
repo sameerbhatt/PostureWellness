@@ -20,7 +20,9 @@ struct SettingsView: View {
     @AppStorage("manualDistance") private var manualDistance: Double = 60
     @AppStorage("breakRemindersEnabled") private var breakRemindersEnabled: Bool = true
     @AppStorage("breakInterval") private var breakInterval: Int = 60
-    
+    @AppStorage("hardwareNudgeEnabled") private var hardwareNudgeEnabled: Bool = false
+    @AppStorage("hardwareNudgeIP") private var hardwareNudgeIP: String = ""
+
     @Environment(\.dismiss) var dismiss
     
     var body: some View {
@@ -36,6 +38,7 @@ struct SettingsView: View {
                     monitoringSection
                     notificationsSection
                     advancedSection
+                    experimentalSection
                     aboutSection
                 }
                 .padding(20)
@@ -345,6 +348,39 @@ struct SettingsView: View {
         }
     }
     
+    // MARK: - Experimental Section
+
+    private var experimentalSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader("Experimental")
+
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Toggle("Physical nudge (Arduino UNO R4 WiFi PoC)", isOn: $hardwareNudgeEnabled)
+                        .onChange(of: hardwareNudgeEnabled) { _ in
+                            saveSettings()
+                        }
+
+                    if hardwareNudgeEnabled {
+                        TextField("Arduino IP address, e.g. 192.168.1.50", text: $hardwareNudgeIP)
+                            .textFieldStyle(.roundedBorder)
+                            .padding(.leading, 20)
+                            .onChange(of: hardwareNudgeIP) { _ in
+                                saveSettings()
+                            }
+                    }
+
+                    Text("Fun proof-of-concept: pairs with an Arduino UNO R4 WiFi + servo on your local network to fire a physical nudge alongside notifications. Local network only, nothing leaves your Mac.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding()
+            .background(Color(NSColor.controlBackgroundColor))
+            .cornerRadius(8)
+        }
+    }
+
     // MARK: - About Section
     
     private var aboutSection: some View {
